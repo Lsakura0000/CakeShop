@@ -22,6 +22,23 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        context.Database.Migrate();
+    }
+    catch(Exception ex) 
+    {
+        var logger =services.GetRequiredService<ILogger<ApplicationDbContext>>();
+        logger.LogError(ex, "資料庫遷移錯誤");
+    }
+}
+
+
 app.UseStaticFiles();
 app.UseRouting();
 
