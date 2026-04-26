@@ -16,7 +16,7 @@ namespace CakeShop.Services
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
             var emailMessage = new MimeMessage();
-            emailMessage.From.Add(new MailboxAddress("蛋糕訂購", _config["EamilSettings:SenderEmail"]));
+            emailMessage.From.Add(new MailboxAddress("蛋糕訂購", _config["EmailSettings:SanderEmail"]));
             emailMessage.To.Add(new MailboxAddress("", email));
             emailMessage.Subject = subject;
 
