@@ -9,27 +9,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CakeShop.Controllers
 {
-    [Authorize]
+    [Authorize] // 確保只有登入的會員可以存取
     public class OrdersController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<IdentityUser> _userManger;
+        private readonly UserManager<IdentityUser> _userManager;
         private readonly IEmailSender _emailSender;
 
-        public OrdersController(ApplicationDbContext context, UserManager<IdentityUser> userManger, IEmailSender emailSender)
+        public OrdersController(ApplicationDbContext context, UserManager<IdentityUser> userManager, IEmailSender emailSender)
         {
             _context = context;
-            _userManger = userManger;
+            _userManager = userManager;
             _emailSender = emailSender;
         }
 
-        [HttpGet]
+
+        [HttpPost]
         public async Task<IActionResult> Create(int cakeId, int quantity)
         {
             var cake = await _context.Cakes.FindAsync(cakeId);
             if (cake == null) return NotFound();
 
-            var user = await _userManger.GetUserAsync(User);
+            var user = await _userManager.GetUserAsync(User);
 
             var order = new Order
             {
@@ -39,20 +40,22 @@ namespace CakeShop.Controllers
                 TotalPrice = cake.Price * quantity
             };
 
-            _context.Orders.Add(order); 
+            _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
-            string subject = "訂單已確認";
+            // 發送訂單確認信
+            string subject = "您的蛋糕訂單已確認！";
             string message = $"親愛的顧客您好，<br>您已成功訂購 {quantity} 份 {cake.Name}，總價為 {order.TotalPrice} 元。<br>感謝您的購買！";
-            await _emailSender.SendEmailAsync(user.Email,subject,message);
+            await _emailSender.SendEmailAsync(user.Email, subject, message);
 
-            return RedirectToAction("Index");
+            return RedirectToAction("Index"); // 假設有一個 Index 顯示訂單列表
+
         }
 
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
-            var user = await _userManger.GetUserAsync(User);
+            var user = await _userManager.GetUserAsync(User);
 
             var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == id && o.UserId == user.Id);
 
@@ -63,6 +66,17 @@ namespace CakeShop.Controllers
             }
 
             return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            var orders = await _context.Orders.Include (o => o.Cake).Where(o => o.UserId == user.Id).OrderByDescending(o => o.OrderDate).ToListAsync();
+
+            return View(orders);
+
         }
     }
 }
